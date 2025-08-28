@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Java 方法顺序对齐工具</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <style>
+        :root {
+            --gap: 12px;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            background: #0b1020;
+            color: #e6edf3;
+        }
+
+        header {
+            display: flex; /* 横向排列 */
+            justify-content: space-between; /* 左右分散：左边标题，右边按钮 */
+            align-items: center; /* 垂直居中 */
+            padding: 16px 20px;
+            border-bottom: 1px solid #222a45;
+            background: #0d1326;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        header h1 {
+            margin: 0; /* 去掉默认外边距 */
+        }
+
+        .wrap {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--gap);
+            padding: var(--gap);
+            height: calc(100% - 70px);
+        }
+
+        .col {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .label {
+            font-size: 12px;
+            opacity: .8;
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        textarea {
+            flex: 1;
+            min-height: 200px;
+            resize: none;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #1d2440;
+            background: #0f1630;
+            color: #e6edf3;
+            line-height: 1.5;
+            font-size: 13px;
+        }
+
+        button {
+            background: #1a2140;
+            color: #fff;
+            border: 1px solid #2a3563;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #222b56;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Java 方法顺序对齐工具</h1>
+    <div class="row">
+        <button id="btnSort">按 A 的顺序对齐 B</button>
+        <button id="btnSwap">A ⇄ B 互换</button>
+        <button id="btnCopyB">复制右侧结果</button>
+    </div>
+</header>
+
+
+<div class="wrap">
+    <div class="col">
+        <div class="label">左：A.java（基准顺序）</div>
+        <textarea id="txtA" placeholder="在此粘贴 A.java"></textarea>
+    </div>
+    <div class="col">
+        <div class="label">右：B.java（待排序 / 结果输出）</div>
+        <textarea id="txtB" placeholder="在此粘贴 B.java"></textarea>
+    </div>
+</div>
+
+<script>
+    const btnSort = document.getElementById("btnSort");
+    const btnSwap = document.getElementById("btnSwap");
+    const btnCopyB = document.getElementById("btnCopyB");
+    const txtA = document.getElementById("txtA");
+    const txtB = document.getElementById("txtB");
+    // 设置按钮状态
+    function setButtonLoading(isLoading) {
+        btnSort.disabled = isLoading;
+        btnSort.textContent = isLoading ? "对齐中..." : "按 A 的顺序对齐 B";
+    }
+
+    // 1. 调用后端接口排序
+    btnSort.addEventListener("click", async () => {
+        const aCode = txtA.value.trim();
+        const bCode = txtB.value.trim();
+        if (!aCode || !bCode) {
+            alert("请先在左右文本框粘贴 A.java 和 B.java 源码");
+            return;
+        }
+
+        try {
+            setButtonLoading(true);
+            const res = await fetch("/java/sort", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ aCode, bCode })
+            });
+
+            if (!res.ok) throw new Error("接口调用失败");
+
+            const text = await res.text();
+            txtB.value = text;
+        } catch (e) {
+            alert("请求失败：" + e.message);
+        } finally {
+            setButtonLoading(false);
+        }
+    });
+
+    // 2. A ⇄ B 互换
+    btnSwap.addEventListener("click", () => {
+        const temp = txtA.value;
+        txtA.value = txtB.value;
+        txtB.value = temp;
+    });
+
+    // 3. 复制右侧结果
+    btnCopyB.addEventListener("click", async () => {
+        if (!txtB.value.trim()) {
+            alert("右侧没有内容可复制");
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(txtB.value);
+            alert("已复制到剪贴板");
+        } catch (err) {
+            alert("复制失败：" + err.message);
+        }
+    });
+</script>
+</body>
+</html>
