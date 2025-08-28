@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <meta charset="UTF-8"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>Java 方法顺序对齐工具</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
             --gap: 12px;
@@ -21,9 +21,9 @@
         }
 
         header {
-            display: flex; /* 横向排列 */
-            justify-content: space-between; /* 左右分散：左边标题，右边按钮 */
-            align-items: center; /* 垂直居中 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding: 16px 20px;
             border-bottom: 1px solid #222a45;
             background: #0d1326;
@@ -33,7 +33,7 @@
         }
 
         header h1 {
-            margin: 0; /* 去掉默认外边距 */
+            margin: 0;
         }
 
         .wrap {
@@ -41,13 +41,14 @@
             grid-template-columns: 1fr 1fr;
             gap: var(--gap);
             padding: var(--gap);
-            height: calc(100% - 70px);
+            height: calc(85%);
         }
 
         .col {
             display: flex;
             flex-direction: column;
             min-height: 0;
+            position: relative;
         }
 
         .label {
@@ -59,19 +60,45 @@
             gap: 8px
         }
 
-        textarea {
+        .editor-wrapper {
+            display: flex;
             flex: 1;
             min-height: 200px;
-            resize: none;
-            width: 100%;
-            box-sizing: border-box;
-            padding: 12px;
             border-radius: 10px;
             border: 1px solid #1d2440;
             background: #0f1630;
+            overflow: hidden;
+        }
+
+        .line-numbers {
+            background: #0a1228;
+            color: #4a5568;
+            padding: 12px 8px;
+            text-align: right;
+            user-select: none;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-y: hidden;
+            min-width: 40px;
+            white-space: pre;
+        }
+
+        textarea {
+            flex: 1;
+            resize: none;
+            border: none;
+            background: transparent;
             color: #e6edf3;
             line-height: 1.5;
             font-size: 13px;
+            padding: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            outline: none;
+        }
+
+        textarea:focus {
+            background: rgba(255, 255, 255, 0.02);
         }
 
         button {
@@ -86,6 +113,12 @@
 
         button:hover {
             background: #222b56;
+        }
+
+        button:disabled {
+            background: #1a2140;
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .row {
@@ -106,15 +139,20 @@
     </div>
 </header>
 
-
 <div class="wrap">
     <div class="col">
         <div class="label">左：A.java（基准顺序）</div>
-        <textarea id="txtA" placeholder="在此粘贴 A.java"></textarea>
+        <div class="editor-wrapper">
+            <div class="line-numbers" id="lineNumbers1">1</div>
+            <textarea id="txtA" placeholder="在此粘贴 A.java"></textarea>
+        </div>
     </div>
     <div class="col">
         <div class="label">右：B.java（待排序 / 结果输出）</div>
-        <textarea id="txtB" placeholder="在此粘贴 B.java"></textarea>
+        <div class="editor-wrapper">
+            <div class="line-numbers" id="lineNumbers2">1</div>
+            <textarea id="txtB" placeholder="在此粘贴 B.java"></textarea>
+        </div>
     </div>
 </div>
 
@@ -124,6 +162,50 @@
     const btnCopyB = document.getElementById("btnCopyB");
     const txtA = document.getElementById("txtA");
     const txtB = document.getElementById("txtB");
+    const lineNumbers1 = document.getElementById("lineNumbers1");
+    const lineNumbers2 = document.getElementById("lineNumbers2");
+
+    // 更新行号
+    function updateLineNumbers(textarea, lineNumbers) {
+        const lines = textarea.value.split('\n').length;
+        const numbers = [];
+        for (let i = 1; i <= lines; i++) {
+            numbers.push(i);
+        }
+        lineNumbers.textContent = numbers.join('\n');
+    }
+
+    // 同步滚动
+    function syncScroll(source, target) {
+        target.scrollTop = source.scrollTop;
+    }
+
+    // 初始化行号
+    updateLineNumbers(txtA, lineNumbers1);
+    updateLineNumbers(txtB, lineNumbers2);
+
+    // 监听输入事件更新行号
+    txtA.addEventListener('input', () => {
+        updateLineNumbers(txtA, lineNumbers1);
+    });
+
+    txtB.addEventListener('input', () => {
+        updateLineNumbers(txtB, lineNumbers2);
+    });
+
+    // 监听滚动事件同步滚动
+    txtA.addEventListener('scroll', () => {
+        syncScroll(txtA, txtB);
+        syncScroll(txtA, lineNumbers1);
+        syncScroll(txtA, lineNumbers2);
+    });
+
+    txtB.addEventListener('scroll', () => {
+        syncScroll(txtB, txtA);
+        syncScroll(txtB, lineNumbers1);
+        syncScroll(txtB, lineNumbers2);
+    });
+
     // 设置按钮状态
     function setButtonLoading(isLoading) {
         btnSort.disabled = isLoading;
@@ -151,6 +233,7 @@
 
             const text = await res.text();
             txtB.value = text;
+            updateLineNumbers(txtB, lineNumbers2);
         } catch (e) {
             alert("请求失败：" + e.message);
         } finally {
@@ -163,6 +246,9 @@
         const temp = txtA.value;
         txtA.value = txtB.value;
         txtB.value = temp;
+
+        updateLineNumbers(txtA, lineNumbers1);
+        updateLineNumbers(txtB, lineNumbers2);
     });
 
     // 3. 复制右侧结果

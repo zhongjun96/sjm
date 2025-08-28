@@ -78,7 +78,6 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.zhongjun96.sjm.SjmApplication</mainClass>
-                    <skip>true</skip>
                 </configuration>
                 <executions>
                     <execution>
